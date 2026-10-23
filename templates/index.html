@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OSTutorLLM</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+    body{background:#f4f7fb;color:#1f2937}
+    .header{background:#173f67;color:#fff;padding:25px 40px}
+    .header h1{font-size:32px}.header p{margin-top:6px;color:#dbeafe}
+    .container{max-width:1150px;margin:40px auto;padding:0 20px}
+    .welcome,.card,#module-panel{background:#fff;border-radius:15px;box-shadow:0 4px 15px #00000010}
+    .welcome{padding:35px;text-align:center}
+    .welcome h2{font-size:28px;margin-bottom:10px}
+    .welcome>p{color:#64748b;margin-bottom:25px}
+    .question-box{display:flex;max-width:800px;margin:auto}
+    .question-box input{flex:1;min-width:0;padding:15px;border:1px solid #cbd5e1;border-radius:8px 0 0 8px;font-size:16px}
+    button{border:0;background:#2563eb;color:white;padding:12px 18px;border-radius:7px;cursor:pointer;font-size:15px}
+    button:hover{background:#1d4ed8}button:disabled{opacity:.6;cursor:wait}
+    .question-box button{border-radius:0 8px 8px 0;padding:15px 25px}
+    #answer-box{display:none;max-width:800px;margin:25px auto 0;padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:left;overflow-wrap:anywhere}
+    #answer h1,#answer h2,#answer h3{margin:16px 0 8px}
+    #answer p,#answer li{line-height:1.65;margin:8px 0}
+    #answer ul,#answer ol{padding-left:25px}
+    #answer pre{padding:12px;background:#e2e8f0;border-radius:8px;overflow:auto}
+    .section-title{margin:40px 0 20px;font-size:24px}
+    .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+    .card{padding:25px;text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s}
+    .card:hover{transform:translateY(-3px);box-shadow:0 7px 18px #00000018}
+    .card .icon{font-size:35px;margin-bottom:12px}.card h3{margin-bottom:8px}
+    .card p{color:#64748b;font-size:15px;line-height:1.35}
+    #module-panel{display:none;margin-top:30px;padding:25px;text-align:left;overflow-wrap:anywhere}
+    #module-title{margin-bottom:15px}
+    #module-topic,#module-answer{display:block;width:100%;padding:12px;margin:12px 0;border:1px solid #cbd5e1;border-radius:8px;font-size:15px}
+    #module-answer{display:none;resize:vertical}
+    #module-actions{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px}
+    #module-result{margin-top:18px;overflow-wrap:anywhere}
+    .mcq-card{padding:15px;margin:12px 0;background:#f4f7fb;border-radius:8px}
+    .mcq-option{display:block;margin:9px 0;line-height:1.4}
+    .mcq-option input{margin-right:8px}
+    .feedback{margin-top:10px;line-height:1.5}
+    .status{margin-top:40px;padding:15px;background:#dcfce7;color:#166534;border-radius:8px;text-align:center}
+    @media(max-width:850px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.header{padding:25px}}
+    @media(max-width:520px){.container{margin-top:20px;padding:0 12px}.welcome{padding:22px}.cards{grid-template-columns:1fr}.question-box{flex-direction:column;gap:10px}.question-box input,.question-box button{width:100%;border-radius:8px}}
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>🧠 OSTutorLLM</h1>
+    <p>AI-Powered Operating Systems Tutor</p>
+  </header>
+
+  <main class="container">
+    <section class="welcome">
+      <h2>Welcome to OSTutorLLM</h2>
+      <p>Learn Operating Systems concepts with the help of AI.</p>
+      <div class="question-box">
+        <input type="text" id="question" placeholder="Ask an Operating Systems question..." aria-label="Operating Systems question">
+        <button id="ask-button" type="button">Ask OSTutor</button>
+      </div>
+      <div id="answer-box">
+        <h3 style="margin-bottom:10px">🤖 OSTutor Answer</h3>
+        <div id="answer" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <h2 class="section-title">Learning Modules</h2>
+    <section class="cards">
+      <div class="card" role="button" tabindex="0" data-module="learn"><div class="icon">📚</div><h3>Learn OS</h3><p>Understand Operating Systems concepts with simple explanations.</p></div>
+      <div class="card" role="button" tabindex="0" data-module="mcq"><div class="icon">❓</div><h3>MCQ Practice</h3><p>Generate and practice Operating Systems multiple-choice questions.</p></div>
+      <div class="card" role="button" tabindex="0" data-module="viva"><div class="icon">🎤</div><h3>Viva Practice</h3><p>Practice OS viva questions and receive AI-based feedback.</p></div>
+      <div class="card" role="button" tabindex="0" data-module="linux"><div class="icon">💻</div><h3>Linux &amp; Shell</h3><p>Get assistance with Linux commands and shell programming.</p></div>
+    </section>
+
+    <section id="module-panel">
+      <h2 id="module-title">Learning Module</h2>
+      <input id="module-topic" type="text" placeholder="Enter a topic, e.g. Deadlocks">
+      <textarea id="module-answer" rows="4" placeholder="Type your viva answer here..."></textarea>
+      <div id="module-actions"></div>
+      <div id="module-result" aria-live="polite"></div>
+    </section>
+    <div class="status">🟢 OSTutorLLM System Ready</div>
+  </main>
+
+  <script>
+    // This page intentionally uses one script block so one broken/duplicated
+    // script section cannot leave the UI functions undefined.
+    const $ = (id) => document.getElementById(id);
+    let currentModule = "";
+
+    function showError(target, error) {
+      target.textContent = error && error.message ? error.message : String(error || "Something went wrong.");
+    }
+
+    function cleanAIText(text) {
+      return String(text || "")
+        .replace(/\$\$([\s\S]*?)\$\$/g, "$1")
+        .replace(/\$([^$\n]+)\$/g, "$1")
+        .replace(/\\\(([\s\S]*?)\\\)/g, "$1")
+        .replace(/\\\[([\s\S]*?)\\\]/g, "$1")
+        .replace(/\\text\{([^{}]*)\}/g, "$1")
+        .replace(/\\mathrm\{([^{}]*)\}/g, "$1")
+        .replace(/\\mathbf\{([^{}]*)\}/g, "$1")
+        .replace(/\\leq?/g, "≤").replace(/\\geq?/g, "≥")
+        .replace(/\\neq/g, "≠").replace(/\\times/g, "×")
+        .replace(/\\cdot/g, "·").replace(/\\rightarrow|\\to/g, "→")
+        .replace(/\\left|\\right/g, "").trim();
+    }
+
+    function renderAIAnswer(text) {
+      const cleaned = cleanAIText(text);
+      // Use safe plain text if Markdown libraries are not available.
+      if (window.marked && window.DOMPurify) {
+        return window.DOMPurify.sanitize(window.marked.parse(cleaned));
+      }
+      const div = document.createElement("div");
+      div.textContent = cleaned;
+      return div.innerHTML.replace(/\n/g, "<br>");
+    }
+
+    async function askOSTutor() {
+      const question = $("question").value.trim();
+      const answerBox = $("answer-box");
+      const answer = $("answer");
+      const button = $("ask-button");
+      if (!question) {
+        alert("Please enter an Operating Systems question.");
+        $("question").focus();
+        return;
+      }
+      answerBox.style.display = "block";
+      answer.textContent = "⏳ Thinking...";
+      button.disabled = true;
+      button.textContent = "Please wait...";
+      try {
+        const response = await fetch("/ask", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({question})
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.answer || data.error || "The server could not process your question.");
+        answer.innerHTML = renderAIAnswer(data.answer || "No answer was returned.");
+        const sources = Array.isArray(data.sources) ? data.sources : [];
+        if (sources.length) {
+          const heading = document.createElement("h3");
+          heading.textContent = "Sources";
+          const list = document.createElement("ul");
+          sources.forEach(source => {
+            const item = document.createElement("li");
+            item.textContent = String(source);
+            list.appendChild(item);
+          });
+          answer.append(heading, list);
+        }
+      } catch (error) {
+        answer.textContent = error.message === "Failed to fetch"
+          ? "Unable to connect to OSTutorLLM. Check that the Flask server is running."
+          : error.message;
+        console.error("Ask OSTutor error:", error);
+      } finally {
+        button.disabled = false;
+        button.textContent = "Ask OSTutor";
+      }
+    }
+
+    async function sendModuleRequest(url, payload) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || data.answer || "Request failed.");
+      return data;
+    }
+
+    function addButton(container, label, callback) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.addEventListener("click", callback);
+      container.appendChild(button);
+      return button;
+    }
+
+    function openModule(module) {
+      currentModule = module;
+      const panel = $("module-panel");
+      const titles = {
+        learn: "📚 Learn OS",
+        mcq: "❓ MCQ Practice",
+        viva: "🎤 Viva Practice",
+        linux: "💻 Linux & Shell"
+      };
+      $("module-title").textContent = titles[module] || "Learning Module";
+      $("module-topic").value = "";
+      $("module-answer").value = "";
+      $("module-answer").style.display = module === "viva" ? "block" : "none";
+      $("module-result").replaceChildren();
+      $("module-actions").replaceChildren();
+      panel.style.display = "block";
+
+      if (module === "learn") {
+        addButton($("module-actions"), "Ask OSTutor", () => {
+          const topic = $("module-topic").value.trim();
+          if (!topic) { alert("Enter an OS question or topic."); return; }
+          $("question").value = topic;
+          $("question").scrollIntoView({behavior:"smooth", block:"center"});
+          $("question").focus();
+        });
+      } else if (module === "mcq") {
+        addButton($("module-actions"), "Generate MCQs", generateMCQs);
+      } else if (module === "viva") {
+        addButton($("module-actions"), "Generate Viva Question", generateViva);
+      } else if (module === "linux") {
+        addButton($("module-actions"), "Ask Linux Tutor", askLinux);
+      }
+      panel.scrollIntoView({behavior:"smooth", block:"start"});
+    }
+
+    async function generateMCQs() {
+      const result = $("module-result");
+      const topic = $("module-topic").value.trim() || "Operating Systems";
+      result.textContent = "Generating MCQs...";
+      try {
+        const data = await sendModuleRequest("/mcq", {topic});
+        if (!Array.isArray(data.questions) || !data.questions.length) throw new Error("No MCQs were returned.");
+        result.replaceChildren();
+        data.questions.forEach((q, index) => {
+          const card = document.createElement("div");
+          card.className = "mcq-card";
+          const heading = document.createElement("h3");
+          heading.textContent = `${index + 1}. ${q.question || "Question"}`;
+          card.appendChild(heading);
+          const feedback = document.createElement("p");
+          feedback.className = "feedback";
+          (Array.isArray(q.options) ? q.options : []).forEach(option => {
+            const label = document.createElement("label");
+            label.className = "mcq-option";
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            radio.name = `mcq-${index}`;
+            radio.value = String(option).trim().charAt(0).toUpperCase();
+            label.append(radio, document.createTextNode(String(option)));
+            card.appendChild(label);
+          });
+          addButton(card, "Check Answer", () => {
+            const selected = card.querySelector(`input[name="mcq-${index}"]:checked`);
+            if (!selected) { feedback.textContent = "Select an option first."; return; }
+            const correct = String(q.answer || "").trim().charAt(0).toUpperCase();
+            feedback.textContent = selected.value === correct
+              ? `Correct! ${q.explanation || ""}`
+              : `Incorrect. Correct answer: ${correct}. ${q.explanation || ""}`;
+          });
+          card.appendChild(feedback);
+          result.appendChild(card);
+        });
+      } catch (error) { showError(result, error); }
+    }
+
+    async function generateViva() {
+      const result = $("module-result");
+      const topic = $("module-topic").value.trim() || "Operating Systems";
+      result.textContent = "Generating viva question...";
+      try {
+        const data = await sendModuleRequest("/viva", {topic});
+        result.replaceChildren();
+        const question = document.createElement("p");
+        question.textContent = data.question || "No question returned.";
+        result.appendChild(question);
+        $("module-answer").style.display = "block";
+        addButton(result, "Evaluate My Answer", async () => {
+          const studentAnswer = $("module-answer").value.trim();
+          if (!studentAnswer) { alert("Enter your answer first."); return; }
+          const feedback = document.createElement("div");
+          feedback.textContent = "Evaluating answer...";
+          result.appendChild(feedback);
+          try {
+            const evaluation = await sendModuleRequest("/viva-feedback", {
+              question: data.question, answer: studentAnswer
+            });
+            feedback.innerHTML = renderAIAnswer(evaluation.feedback || "");
+          } catch (error) { showError(feedback, error); }
+        });
+      } catch (error) { showError(result, error); }
+    }
+
+    async function askLinux() {
+      const topic = $("module-topic").value.trim();
+      const result = $("module-result");
+      if (!topic) { result.textContent = "Enter a Linux command or Shell programming question."; return; }
+      result.textContent = "Thinking...";
+      try {
+        const data = await sendModuleRequest("/linux", {question:topic});
+        result.innerHTML = renderAIAnswer(data.answer || "");
+      } catch (error) { showError(result, error); }
+    }
+
+    $("ask-button").addEventListener("click", askOSTutor);
+    $("question").addEventListener("keydown", event => {
+      if (event.key === "Enter") askOSTutor();
+    });
+    document.querySelectorAll("[data-module]").forEach(card => {
+      card.addEventListener("click", () => openModule(card.dataset.module));
+      card.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openModule(card.dataset.module);
+        }
+      });
+    });
+
+    // Expose functions globally for quick Console testing and compatibility.
+    window.askOSTutor = askOSTutor;
+    window.openModule = openModule;
+    window.generateMCQs = generateMCQs;
+    window.generateViva = generateViva;
+    window.askLinux = askLinux;
+  </script>
+</body>
+</html>
